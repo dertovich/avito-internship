@@ -32,13 +32,20 @@ func NewSegmentsTable(db *sql.DB) (*sql.DB, error) {
 func (p *Postgres) CreateSegment(segmentToCreate string) (int64, error) {
 	const op = "storage.postgres.segments_table.CreateSegment"
 
+	tx, err := p.segmentsTable.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("%s: failed to begin transaction: %w", op, err)
+	}
+
 	stmt, err := p.segmentsTable.Prepare("INSERT INTO segments(name) VALUES(DEFAULT, $1)")
 	if err != nil {
+		tx.Rollback()
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
 	res, err := stmt.Exec(segmentToCreate)
 	if err != nil {
+		tx.Rollback()
 		pqErr, ok := err.(*pq.Error)
 		if ok && pqErr.Code == "23505" {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrSegmentExists)
@@ -48,8 +55,15 @@ func (p *Postgres) CreateSegment(segmentToCreate string) (int64, error) {
 
 	id, err := res.LastInsertId()
 	if err != nil {
+		tx.Rollback()
 		return 0, fmt.Errorf("%s: failed to get last insert id: %w", op, err)
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		return 0, fmt.Errorf("%s: failed to commit transaction: %w", op, err)
+	}
+
 	return id, nil
 }
 
