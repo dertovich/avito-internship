@@ -8,11 +8,7 @@ import (
 	"github.com/lib/pq"
 )
 
-type SegmentsTable struct {
-	db *sql.DB
-}
-
-func NewSegmentsTable(db *sql.DB) (*SegmentsTable, error) {
+func NewSegmentsTable(db *sql.DB) (*sql.DB, error) {
 	const op = "storage.postgres.NewSegmentsTable"
 
 	stmt, err := db.Prepare(`
@@ -30,13 +26,13 @@ func NewSegmentsTable(db *sql.DB) (*SegmentsTable, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &SegmentsTable{db: db}, nil
+	return db, nil
 }
 
 func (p *Postgres) CreateSegment(segmentToCreate string) (int64, error) {
 	const op = "storage.postgres.segments_table.CreateSegment"
 
-	stmt, err := p.segmentsTable.db.Prepare("INSERT INTO segments(id, name) VALUES(?, ?)")
+	stmt, err := p.segmentsTable.Prepare("INSERT INTO segments(name) VALUES(DEFAULT, $1)")
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
@@ -60,7 +56,7 @@ func (p *Postgres) CreateSegment(segmentToCreate string) (int64, error) {
 func (p *Postgres) DeleteSegment(segmentToDelete string) (int64, error) {
 	const op = "storage.postgres.segments_table.DeleteSegment"
 
-	stmt, err := p.segmentsTable.db.Prepare("DELETE FROM segments WHERE name = $1")
+	stmt, err := p.segmentsTable.Prepare("DELETE FROM segments WHERE name = $1")
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}

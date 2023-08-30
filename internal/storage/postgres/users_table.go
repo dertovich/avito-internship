@@ -7,40 +7,53 @@ import (
 	"github.com/lib/pq"
 )
 
-type UsersTable struct {
-	db *sql.DB
-}
-
-func NewUsersTable(db *sql.DB) (*UsersTable, error) {
+func NewUsersTable(db *sql.DB) (*sql.DB, error) {
 	const op = "storage.postgres.NewUsersTable"
 
-	stmt, err := db.Prepare(`
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	stmt, err := tx.Prepare(`
 	CREATE TABLE IF NOT EXISTS users(
 		id SERIAL PRIMARY KEY,
-		segments TEXT[]
+		segments pq.StringArray
 	);
 	`)
 	if err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &UsersTable{db: db}, nil
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return db, nil
 }
 
-func (p *Postgres) CreateUser(user_id int, segments []string) error {
+func (p *Postgres) CreateUser(user_id int64, segments []string) error {
 	const op = "storage.postgres.users_table.CreateUser"
 
-	stmt, err := p.usersTable.db.Prepare("INSERT INTO users(id, segments) VALUES(?,?)")
+	segments, err := p.validateSegments(segments)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = stmt.Exec(user_id, pq.Array(segments))
+	stmt, err := p.usersTable.Prepare("INSERT INTO users(id, segments) VALUES(?,?)")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = stmt.Exec(user_id, pq.StringArray(segments))
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -55,14 +68,12 @@ func (p *Postgres) AddUserToSegment(user_id int64, segments []string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	stmt, err := p.usersTable.db.Prepare(
-		"UPDATE users SET segments = array_append(segments, $1) WHERE id = $2")
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
 	for _, segment := range segments {
-		_, err = stmt.Exec(segment, user_id)
+		_, err := p.usersTable.Exec(
+			"UPDATE users SET segments = pq.ArrayAppend(segments, $1) WHERE id = $2",
+			segment,
+			user_id,
+		)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
@@ -78,14 +89,12 @@ func (p *Postgres) RemoveSegmentsFromUser(user_id int64, segments []string) erro
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	stmt, err := p.usersTable.db.Prepare(
-		"UPDATE users SET segments = array_remove(segments, $1) WHERE id = $2")
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
 	for _, segment := range segments {
-		_, err = stmt.Exec(segment, user_id)
+		_, err := p.usersTable.Exec(
+			"UPDATE users SET segments = pq.ArrayDelete(segments, $1) WHERE id = $2",
+			segment,
+			user_id,
+		)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
@@ -101,12 +110,17 @@ func (p *Postgres) ShowActiveSegmentUser(user_id int64) ([]string, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	var segments []string
-	err := p.usersTable.db.QueryRow(
-		"SELECT segments FROM users WHERE id = $1", user_id).Scan(pq.Array(&segments))
+	var segments pq.StringArray
+	err := p.usersTable.QueryRow(
+		"SELECT segments FROM users WHERE id = $1", user_id).Scan(&segments)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return segments, nil
+	var activeSegments []string
+	for _, segment := range segments {
+		activeSegments = append(activeSegments, segment)
+	}
+
+	return activeSegments, nil
 }

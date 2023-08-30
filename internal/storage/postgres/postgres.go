@@ -3,13 +3,11 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-
-	_ "github.com/lib/pq" // Импорт драйвера для PostgreSQL
 )
 
 type Postgres struct {
-	segmentsTable *SegmentsTable
-	usersTable    *UsersTable
+	segmentsTable *sql.DB
+	usersTable    *sql.DB
 }
 
 func New(postgresPath string) (*Postgres, error) {

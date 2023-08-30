@@ -6,7 +6,6 @@ import (
 	"avito-internship/internal/lib/logger/slogger"
 	"net/http"
 
-	//"avito-internship/internal/storage"
 	"avito-internship/internal/storage/postgres"
 	"os"
 
@@ -14,6 +13,7 @@ import (
 	"avito-internship/internal/http-server/handlers/segments/save"
 	delsegments "avito-internship/internal/http-server/handlers/users/del_segments"
 	getactiveseg "avito-internship/internal/http-server/handlers/users/get-active-seg"
+	"avito-internship/internal/http-server/handlers/users/save/saveuser"
 	save_seg_user "avito-internship/internal/http-server/handlers/users/save_seg_user"
 	mwLogger "avito-internship/internal/http-server/middleware/logger"
 
@@ -51,6 +51,8 @@ func main() {
 	// Create and delete segments
 	router.Post("/segment", save.New(log, storage))
 	router.Delete("/segment/{id}", del.DelSeg(log, storage))
+
+	router.Post("/users", saveuser.New(log, storage))
 
 	// Get active users segments, save segments to user, delete segments from user
 	router.Get("/users/{id}/segments", getactiveseg.GetActiveSegmentsForUser(log, storage))
