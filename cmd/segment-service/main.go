@@ -10,7 +10,11 @@ import (
 	"avito-internship/internal/storage/postgres"
 	"os"
 
+	"avito-internship/internal/http-server/handlers/segments/del"
 	"avito-internship/internal/http-server/handlers/segments/save"
+	delsegments "avito-internship/internal/http-server/handlers/users/del_segments"
+	getactiveseg "avito-internship/internal/http-server/handlers/users/get-active-seg"
+	save_seg_user "avito-internship/internal/http-server/handlers/users/save_seg_user"
 	mwLogger "avito-internship/internal/http-server/middleware/logger"
 
 	"github.com/go-chi/chi/middleware"
@@ -44,7 +48,14 @@ func main() {
 	router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
 
+	// Create and delete segments
 	router.Post("/segment", save.New(log, storage))
+	router.Delete("/segment/{id}", del.DelSeg(log, storage))
+
+	// Get active users segments, save segments to user, delete segments from user
+	router.Get("/users/{id}/segments", getactiveseg.GetActiveSegmentsForUser(log, storage))
+	router.Post("/users/{id}/segments", save_seg_user.AddUserToSegments(log, storage))
+	router.Delete("/segment/{segmentName}", delsegments.DelSeg(log, storage))
 
 	srv := &http.Server{
 		Addr:         cfg.Address,

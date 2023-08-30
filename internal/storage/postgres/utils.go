@@ -18,7 +18,7 @@ func (p *Postgres) SegmentExists(segment string) (bool, error) {
 	return res, nil
 }
 
-func (p *Postgres) UserExists(user_id int) (bool, error) {
+func (p *Postgres) UserExists(user_id int64) (bool, error) {
 	const op = "storage.postgres.users_table.UserExists"
 
 	var res bool
@@ -31,7 +31,7 @@ func (p *Postgres) UserExists(user_id int) (bool, error) {
 	return res, nil
 }
 
-func (p *Postgres) validateUserAndSegment(user_id int, segment string) error {
+func (p *Postgres) validateUserAndSegment(user_id int64, segments []string) error {
 	userExists, err := p.UserExists(user_id)
 	if err != nil {
 		return err
@@ -40,12 +40,14 @@ func (p *Postgres) validateUserAndSegment(user_id int, segment string) error {
 		return storage.ErrUserNotFound
 	}
 
-	segmentExists, err := p.SegmentExists(segment)
-	if err != nil {
-		return err
-	}
-	if !segmentExists {
-		return storage.ErrSegmentNotFound
+	for _, segment := range segments {
+		segmentExists, err := p.SegmentExists(segment)
+		if err != nil {
+			return err
+		}
+		if !segmentExists {
+			return storage.ErrSegmentNotFound
+		}
 	}
 
 	return nil

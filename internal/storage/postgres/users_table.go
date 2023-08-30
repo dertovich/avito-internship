@@ -48,10 +48,10 @@ func (p *Postgres) CreateUser(user_id int, segments []string) error {
 	return nil
 }
 
-func (p *Postgres) AddUserToSegment(user_id int, segment string) error {
+func (p *Postgres) AddUserToSegment(user_id int64, segments []string) error {
 	const op = "storage.postgres.users_table.AddUserToSegment"
 
-	if err := p.validateUserAndSegment(user_id, segment); err != nil {
+	if err := p.validateUserAndSegment(user_id, segments); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -61,18 +61,20 @@ func (p *Postgres) AddUserToSegment(user_id int, segment string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = stmt.Exec(segment, user_id)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+	for _, segment := range segments {
+		_, err = stmt.Exec(segment, user_id)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	return nil
 }
 
-func (p *Postgres) RemoveUserFromSegment(user_id int, segment string) error {
-	const op = "storage.postgres.users_table.RemoveUserFromSegment"
+func (p *Postgres) RemoveSegmentsFromUser(user_id int64, segments []string) error {
+	const op = "storage.postgres.users_table.RemoveSegmentsFromUser"
 
-	if err := p.validateUserAndSegment(user_id, segment); err != nil {
+	if err := p.validateUserAndSegment(user_id, segments); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -82,15 +84,17 @@ func (p *Postgres) RemoveUserFromSegment(user_id int, segment string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = stmt.Exec(segment, user_id)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+	for _, segment := range segments {
+		_, err = stmt.Exec(segment, user_id)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	return nil
 }
 
-func (p *Postgres) ShowActiveSegmentUser(user_id int) ([]string, error) {
+func (p *Postgres) ShowActiveSegmentUser(user_id int64) ([]string, error) {
 	const op = "storage.postgres.users_table.ShowActiveSegmentUser"
 
 	if _, err := p.UserExists(user_id); err != nil {
