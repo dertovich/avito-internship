@@ -17,13 +17,13 @@
 
 
 #### Структура проекта
-- cmd/segment-service содержит main.go
-- internal/config содержит методы обработки файла конфига
-- internal/http-server/handlers содержит хэндлеры запросов
-- internal/http-server/middleware/logger содержит метод логгирования хэндлеров
-- internal/lib/api/response содержит структуры ответа на запрос и валидации ошибок
-- internal/lib/logger содержит функции лога, которая часто встречается в других методах
-- internal/lib/storage содержит методы работы с БД
+- `cmd/segment-service` содержит main.go
+- `internal/config` содержит методы обработки файла конфига
+- `internal/http-server/handlers` содержит хэндлеры запросов
+- `internal/http-server/middleware/logger` содержит метод логгирования хэндлеров
+- `internal/lib/api/response` содержит структуры ответа на запрос и валидации ошибок
+- `internal/lib/logger` содержит функции лога, которая часто встречается в других методах
+- `internal/lib/storage` содержит методы работы с БД
 
 
 # Usage
